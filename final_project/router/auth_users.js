@@ -68,11 +68,66 @@ regd_users.post("/login", (req, res) => {
 });
 
 // Add a book review
-regd_users.put("/auth/review/:isbn", (req, res) => {
-  //Write your code here
-  return res.status(300).json({ message: "Yet to be implemented" });
+regd_users.put("/auth/review/:isbn", function (req, res) {
+  const isbn = req.params.isbn; // 1️⃣ Get ISBN from route params
+  const review = req.query.review; // 2️⃣ Get review text from query
+  const username = req.session.authorization.username;
+ // 3️⃣ Get logged-in username from session
+
+  // 4️⃣ Check if the user is logged in
+  if (!username) {
+    return res
+      .status(401)
+      .json({ message: "You must be logged in to post a review." });
+  }
+
+  // 5️⃣ Check if review text is provided
+  if (!review) {
+    return res.status(400).json({ message: "Review text is required." });
+  }
+
+  // 6️⃣ Check if the ISBN exists in the books object
+  if (!books[isbn]) {
+    return res.status(404).json({ message: "Book not found." });
+  }
+
+  // 7️⃣ Add or update the review
+  books[isbn].reviews[username] = review;
+
+  return res.status(200).json({
+    message: "Review added/updated successfully!",
+    reviews: books[isbn].reviews,
+  });
 });
 
-module.exports.authenticated = regd_users;
+// Delete a book review
+regd_users.delete("/auth/review/:isbn", (req, res) => {
+  const isbn = req.params.isbn; // Get the ISBN from the URL
+  const username = req.session.username; // Get the logged-in user's username from session
+
+  // 1️⃣ Check if user is logged in
+  if (!username) {
+    return res.status(401).json({ message: "You must be logged in to delete a review." });
+  }
+
+  // 2️⃣ Check if the book exists
+  if (!books[isbn]) {
+    return res.status(404).json({ message: "Book not found." });
+  }
+
+  // 3️⃣ Check if the user has a review for this book
+  if (books[isbn].reviews[username]) {
+    delete books[isbn].reviews[username]; // Delete that user's review
+    return res.status(200).json({
+      message: "Your review has been deleted successfully.",
+      reviews: books[isbn].reviews,
+    });
+  } else {
+    return res.status(404).json({ message: "You have not posted a review for this book." });
+  }
+});
+
+
+module.exports = regd_users;
 module.exports.isValid = isValid;
 module.exports.users = users;
